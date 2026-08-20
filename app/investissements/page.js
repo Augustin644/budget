@@ -80,7 +80,7 @@ export default function InvestissementsPage() {
       const apiKey = typeof window !== 'undefined' ? localStorage.getItem('ai_api_key') : null;
 
       if (!apiKey) {
-        alert('Configurez votre clé AI dans les paramètres');
+        addToast({ type: 'error', message: 'Configurez votre clé AI dans les paramètres' });
         return;
       }
 
@@ -106,7 +106,7 @@ export default function InvestissementsPage() {
         positionsCount: investments.length,
       });
     } catch (err) {
-      alert(err.message || 'Erreur lors de l\'analyse');
+      addToast({ type: 'error', message: err.message || 'Erreur lors de l\'analyse' });
     } finally {
       setAnalysisLoading(false);
     }

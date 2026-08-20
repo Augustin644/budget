@@ -1,80 +1,40 @@
 import { NextResponse } from 'next/server';
 
-const SYSTEM_PROMPT = `Tu es un conseiller financier pédagogue et rigoureux. Tu analyses un portefeuille d'investissement et tu produces un diagnostic structuré.
+const SYSTEM_PROMPT = `Tu es un conseiller financier pédagogue. Analyses un portefeuille et retourne un diagnostic JSON structuré.
 
-RÈGLES FONDAMENTALES :
-- Tu ne donnes JAMAIS de conseils d'achat ou de vente directs
-- Tu distingues TOUJOURS les faits objectifs des interprétations
-- Tu expliques le POURQUOI de chaque observation
-- Tu es pédagogue : tu enseignes à l'utilisateur
-- Tu utilises un ton professionnel mais accessible
+RÈGLES : Pas de conseils d'achat/vente. Distingue faits et interprétations. Sois pédagogue.
 
-FORMAT DE RÉPONSE (JSON strict) :
-Tu dois retourner UNIQUEMENT un objet JSON valide, sans texte avant ou après.
-
+Réponds UNIQUEMENT avec ce JSON, sans texte avant/après :
 {
-  "resume": "Vue d'ensemble en 2-3 phrases du portefeuille",
-  "repartition": {
-    "parType": { "Action": 45, "ETF": 35, "Obligation": 10, "Crypto": 10 },
-    "description": "Résumé textuel de la répartition"
-  },
-  "pointsForts": [
-    {
-      "titre": "Nom du point fort",
-      "explication": "Pourquoi c'est un point fort, avec données chiffrées",
-      "donnee": "Donnée objective qui le justifie"
-    }
-  ],
-  "pointsAttention": [
-    {
-      "titre": "Nom du point d'attention",
-      "explication": "Pourquoi c'est un risque, avec données chiffrées",
-      "donnee": "Donnée objective qui le justifie",
-      "severite": "faible|moyen|élevé"
-    }
-  ],
-  "axesAmelioration": [
-    {
-      "titre": "Piste d'amélioration",
-      "explication": "Ce qui pourrait être amélioré et pourquoi",
-      "avantages": ["..."],
-      "inconvenients": ["..."]
-    }
-  ],
-  "metriques": {
-    "diversification": "score de 1 à 10 avec explication",
-    "risqueGlobal": "faible|moyen|élevé avec justification",
-    "coutEstime": "Estimation des frais si pertinent"
-  }
+  "resume": "Vue d'ensemble en 2-3 phrases",
+  "repartition": { "parType": { "Action": 45, "ETF": 35 }, "description": "..." },
+  "pointsForts": [{ "titre": "...", "explication": "...", "donnee": "..." }],
+  "pointsAttention": [{ "titre": "...", "explication": "...", "donnee": "...", "severite": "faible|moyen|élevé" }],
+  "axesAmelioration": [{ "titre": "...", "explication": "...", "avantages": ["..."], "inconvenients": ["..."] }],
+  "metriques": { "diversification": "score 1-10", "risqueGlobal": "faible|moyen|élevé" }
 }
 
-RÈGLES DE SORTIE :
-- Les pointsForts, pointsAttention et axesAmelioration doivent avoir entre 2 et 5 éléments chacun
-- Chaque élément doit contenir une donnée objective chiffrée quand possible
-- Ne jamais inventer de données qui ne sont pas dans le portefeuille fourni
-- Si des informations manquent pour une analyse complète, le signaler dans le resume
-- Les axisAmelioration ne doivent JAMAIS recommander d'acheter ou vendre un actif spécifique`;
+2-5 éléments par tableau. Données chiffrées. Ne jamais inventer de données absentes du portefeuille.`;
 
 function formatPortfolioData(investments, accounts) {
   const positions = investments.map((inv) => ({
     name: inv.name,
     type: inv.type,
-    quantity: inv.quantity,
-    averageCost: inv.averageCost,
-    currentPrice: inv.currentPrice,
-    investedAmount: inv.investedAmount,
-    currentValue: inv.currentValue,
-    gainLoss: inv.gainLoss,
-    gainLossPercent: inv.gainLossPercent,
+    qty: inv.quantity,
+    cost: inv.averageCost,
+    price: inv.currentPrice,
+    invested: inv.investedAmount,
+    value: inv.currentValue,
+    pl: inv.gainLoss,
+    plPct: inv.gainLossPercent,
   }));
 
-  const totalInvested = positions.reduce((s, p) => s + (p.investedAmount || 0), 0);
-  const totalValue = positions.reduce((s, p) => s + (p.currentValue || 0), 0);
+  const totalInvested = positions.reduce((s, p) => s + (p.invested || 0), 0);
+  const totalValue = positions.reduce((s, p) => s + (p.value || 0), 0);
 
   const accountsSummary = (accounts || []).map((a) => ({
     name: a.name,
     type: a.type,
-    bank: a.bank,
     balance: a.balance,
   }));
 
@@ -83,10 +43,22 @@ function formatPortfolioData(investments, accounts) {
     totalInvested,
     totalValue,
     gainLoss: totalValue - totalInvested,
-    gainLossPercent: totalInvested > 0 ? ((totalValue - totalInvested) / totalInvested * 100).toFixed(2) : 0,
+    gainLossPct: totalInvested > 0 ? ((totalValue - totalInvested) / totalInvested * 100).toFixed(2) : 0,
     accounts: accountsSummary,
-    numberOfPositions: positions.length,
-  }, null, 2);
+  });
+}
+
+async function fetchWithRetry(url, options, retries = 2, delay = 2000) {
+  for (let i = 0; i <= retries; i++) {
+    const res = await fetch(url, options);
+    if (res.ok) return res;
+    if (i < retries && (res.status === 503 || res.status === 429 || res.status === 500)) {
+      await new Promise((r) => setTimeout(r, delay * (i + 1)));
+      continue;
+    }
+    return res;
+  }
+  throw new Error('Service temporairement indisponible, réessayez dans quelques instants');
 }
 
 async function callAI(text, provider, apiKey) {
@@ -124,19 +96,25 @@ async function callAI(text, provider, apiKey) {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
       buildBody: (messages) => JSON.stringify({ model: 'gemini-2.5-flash', messages, temperature: 0.2, max_tokens: 3000 }),
       extract: (data) => data.choices[0].message.content,
+      mergeSystemIntoUser: true,
     },
   };
 
   const config = providers[provider] || providers.openai;
 
-  const messages = config.skipSystemInMessages
-    ? [{ role: 'user', content: text }]
-    : [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: text },
-      ];
+  let messages;
+  if (config.skipSystemInMessages) {
+    messages = [{ role: 'user', content: text }];
+  } else if (config.mergeSystemIntoUser) {
+    messages = [{ role: 'user', content: `${SYSTEM_PROMPT}\n\n${text}` }];
+  } else {
+    messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: text },
+    ];
+  }
 
-  const res = await fetch(config.url, {
+  const res = await fetchWithRetry(config.url, {
     method: 'POST',
     headers: config.headers,
     body: config.buildBody(messages),
@@ -175,7 +153,7 @@ export async function POST(request) {
     }
 
     const portfolioText = formatPortfolioData(investments, accounts);
-    const prompt = `Analyse ce portefeuille d'investissement en profondeur et fournis un diagnostic structuré.\n\nDonnées du portefeuille :\n${portfolioText}`;
+    const prompt = `Analyse ce portefeuille et fournis un diagnostic structuré.\n\n${portfolioText}`;
 
     const raw = await callAI(prompt, provider, apiKey);
     const analysis = parseAnalysis(raw);
