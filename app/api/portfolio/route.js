@@ -120,9 +120,9 @@ async function callAI(text, provider, apiKey) {
     },
     gemini: {
       url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      buildBody: (messages) => JSON.stringify({ model: 'gemini-2.0-flash', messages, temperature: 0.2, max_tokens: 3000 }),
+      buildBody: (messages) => JSON.stringify({ model: 'gemini-2.5-flash', messages, temperature: 0.2, max_tokens: 3000 }),
       extract: (data) => data.choices[0].message.content,
     },
   };
