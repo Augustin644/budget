@@ -11,6 +11,7 @@ import Badge from '@/app/components/ui/Badge';
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog';
 import { useToast } from '@/app/components/ui/Toast';
 import EmptyState from '@/app/components/ui/EmptyState';
+import PortfolioAnalysis from '@/app/components/investments/PortfolioAnalysis';
 import { formatCurrency, formatPercent, formatNumber } from '@/utils/currency';
 import { getToday, getMonthLabel } from '@/utils/dates';
 import { calculatePortfolioTotals, calculatePatrimoine } from '@/utils/patrimoine';
@@ -40,6 +41,11 @@ export default function InvestissementsPage() {
   const [activePositions, setActivePositions] = useState(new Set());
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [analysis, setAnalysis] = useState(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+
+  const { add: addAnalysis } = useCollection('portfolioAnalysis');
+  const { data: analysisHistory } = useCollection('portfolioAnalysis', { orderBy: 'createdAt', orderDir: 'desc' });
 
   const loading = authLoading || accountsLoading || investmentsLoading;
 
@@ -65,6 +71,45 @@ export default function InvestissementsPage() {
       else next.add(name);
       return next;
     });
+  };
+
+  const handleAnalyze = async () => {
+    setAnalysisLoading(true);
+    try {
+      const provider = typeof window !== 'undefined' ? localStorage.getItem('ai_provider') : null;
+      const apiKey = typeof window !== 'undefined' ? localStorage.getItem('ai_api_key') : null;
+
+      if (!apiKey) {
+        alert('Configurez votre clé AI dans les paramètres');
+        return;
+      }
+
+      const res = await fetch('/api/portfolio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          investments,
+          accounts,
+          provider: provider || 'openai',
+          apiKey,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'analyse');
+
+      setAnalysis(data.analysis);
+
+      await addAnalysis({
+        date: getToday(),
+        analysis: data.analysis,
+        positionsCount: investments.length,
+      });
+    } catch (err) {
+      alert(err.message || 'Erreur lors de l\'analyse');
+    } finally {
+      setAnalysisLoading(false);
+    }
   };
 
   const globalChartData = useMemo(() => {
@@ -371,6 +416,15 @@ export default function InvestissementsPage() {
             </Card>
           )}
         </div>
+      )}
+
+      {investments.length > 0 && (
+        <PortfolioAnalysis
+          analysis={analysis}
+          history={analysisHistory}
+          onAnalyze={handleAnalyze}
+          loading={analysisLoading}
+        />
       )}
 
       {investments.length === 0 ? (
