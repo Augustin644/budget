@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-inter: var(--font-inter);
+  --color-background: #0B0F1A;
+  --color-foreground: #ffffff;
+  --color-card: #111827;
+  --color-border: #1F2937;
+  --color-cyan: #39F6D6;
+  --color-violet: #9B6BFF;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1F2937 transparent;
+}
+
+body {
+  background: #0B0F1A;
+  color: #ffffff;
+}
+
+/* Custom scrollbar for webkit */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1F2937;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #374151;
+}
+
+/* Number input spin buttons */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
