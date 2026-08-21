@@ -16,13 +16,6 @@ import { getToday } from '@/utils/dates';
 import { db } from '@/lib/firebase';
 import { collection, writeBatch, doc, getDocs } from 'firebase/firestore';
 
-const PROVIDERS = [
-  { value: 'openai', label: 'OpenAI (GPT-4o mini)' },
-  { value: 'anthropic', label: 'Anthropic (Claude)' },
-  { value: 'mistral', label: 'Mistral AI' },
-  { value: 'gemini', label: 'Google Gemini' },
-];
-
 function normalizeText(str) {
   return str.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 30);
 }
@@ -54,7 +47,6 @@ export default function ScanPage() {
   const router = useRouter();
 
   const apiKey = typeof window !== 'undefined' ? localStorage.getItem('ai_api_key') || '' : '';
-  const aiProvider = typeof window !== 'undefined' ? localStorage.getItem('ai_provider') || 'openai' : 'openai';
 
   if (authLoading) {
     return <div className="flex items-center justify-center min-h-[50vh] text-gray-400">Chargement...</div>;
@@ -113,11 +105,7 @@ export default function ScanPage() {
       const res = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: extractedText,
-          provider: aiProvider,
-          apiKey,
-        }),
+        body: JSON.stringify({ text: extractedText, apiKey }),
       });
 
       const data = await res.json();
