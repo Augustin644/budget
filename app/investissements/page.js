@@ -11,7 +11,6 @@ import Badge from '@/app/components/ui/Badge';
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog';
 import { useToast } from '@/app/components/ui/Toast';
 import EmptyState from '@/app/components/ui/EmptyState';
-import PortfolioAnalysis from '@/app/components/investments/PortfolioAnalysis';
 import { formatCurrency, formatPercent, formatNumber } from '@/utils/currency';
 import { getToday, getMonthLabel } from '@/utils/dates';
 import { calculatePortfolioTotals, calculatePatrimoine } from '@/utils/patrimoine';
@@ -41,8 +40,6 @@ export default function InvestissementsPage() {
   const [activePositions, setActivePositions] = useState(new Set());
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [analysis, setAnalysis] = useState(null);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
 
   const loading = authLoading || accountsLoading || investmentsLoading;
 
@@ -68,76 +65,6 @@ export default function InvestissementsPage() {
       else next.add(name);
       return next;
     });
-  };
-
-  const handleAnalyze = async () => {
-    setAnalysisLoading(true);
-    try {
-      const provider = typeof window !== 'undefined' ? localStorage.getItem('ai_provider') : null;
-      const apiKey = typeof window !== 'undefined' ? localStorage.getItem('ai_api_key') : null;
-
-      if (!apiKey) {
-        addToast({ type: 'error', message: 'Aucune cle AI. Allez dans Parametres > Config AI.' });
-        setAnalysisLoading(false);
-        return;
-      }
-
-      if (!investments || investments.length === 0) {
-        addToast({ type: 'error', message: 'Aucun investissement a analyser.' });
-        setAnalysisLoading(false);
-        return;
-      }
-
-      const usedProvider = provider || 'gemini';
-
-      const safeInvestments = investments.map((inv) => ({
-        name: String(inv.name || ''),
-        type: String(inv.type || ''),
-        quantity: Number(inv.quantity) || 0,
-        averageCost: Number(inv.averageCost) || 0,
-        currentPrice: Number(inv.currentPrice) || 0,
-        investedAmount: Number(inv.investedAmount) || 0,
-        currentValue: Number(inv.currentValue) || 0,
-        gainLoss: Number(inv.gainLoss) || 0,
-        gainLossPercent: Number(inv.gainLossPercent) || 0,
-      }));
-
-      const safeAccounts = (accounts || []).map((a) => ({
-        name: String(a.name || ''),
-        type: String(a.type || ''),
-        balance: Number(a.balance) || 0,
-      }));
-
-      const res = await fetch('/api/portfolio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          investments: safeInvestments,
-          accounts: safeAccounts,
-          provider: usedProvider,
-          apiKey,
-        }),
-      });
-
-      const data = await res.json().catch(() => (null));
-      if (!res.ok) throw new Error(data?.error || 'Erreur serveur');
-      if (!data?.analysis) throw new Error('Pas de donnees');
-
-      const a = data.analysis;
-      setAnalysis({
-        resume: String(a.resume || ''),
-        repartition: a.repartition || null,
-        pointsForts: Array.isArray(a.pointsForts) ? a.pointsForts : [],
-        pointsAttention: Array.isArray(a.pointsAttention) ? a.pointsAttention : [],
-        axesAmelioration: Array.isArray(a.axesAmelioration) ? a.axesAmelioration : [],
-        metriques: a.metriques || null,
-      });
-      addToast({ type: 'success', message: 'Analyse terminee !' });
-    } catch (err) {
-      addToast({ type: 'error', message: 'Erreur : ' + String(err?.message || err) });
-    } finally {
-      setAnalysisLoading(false);
-    }
   };
 
   const globalChartData = useMemo(() => {
@@ -444,14 +371,6 @@ export default function InvestissementsPage() {
             </Card>
           )}
         </div>
-      )}
-
-      {investments.length > 0 && (
-        <PortfolioAnalysis
-          analysis={analysis}
-          onAnalyze={handleAnalyze}
-          loading={analysisLoading}
-        />
       )}
 
       {investments.length === 0 ? (
