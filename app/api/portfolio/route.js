@@ -160,6 +160,7 @@ export async function POST(request) {
 
     return NextResponse.json({ analysis });
   } catch (err) {
+    console.error('[portfolio] Error:', err.message, err.stack);
     return NextResponse.json({ error: err.message || 'Erreur lors de l\'analyse' }, { status: 500 });
   }
 }
