@@ -48,15 +48,27 @@ function formatPortfolioData(investments, accounts) {
   });
 }
 
-async function fetchWithRetry(url, options, retries = 1, delay = 1500) {
+async function fetchWithRetry(url, options, retries = 0, delay = 1500) {
   for (let i = 0; i <= retries; i++) {
-    const res = await fetch(url, options);
-    if (res.ok) return res;
-    if (i < retries && (res.status === 503 || res.status === 429 || res.status === 500)) {
-      await new Promise((r) => setTimeout(r, delay));
-      continue;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 7000);
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      if (res.ok) return res;
+      if (i < retries && (res.status === 503 || res.status === 429 || res.status === 500)) {
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      return res;
+    } catch (err) {
+      clearTimeout(timer);
+      if (i < retries) {
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+      throw new Error(`Timeout ou reseau: ${err.message}`);
     }
-    return res;
   }
 }
 
@@ -66,7 +78,7 @@ async function callAI(text, provider, apiKey) {
       url: 'https://api.openai.com/v1/chat/completions',
       model: 'gpt-4o',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      buildBody: (messages) => JSON.stringify({ model: 'gpt-4o', messages, temperature: 0.2, max_tokens: 3000 }),
+      buildBody: (messages) => JSON.stringify({ model: 'gpt-4o', messages, temperature: 0.2, max_tokens: 1500 }),
       extract: (data) => data.choices[0].message.content,
     },
     anthropic: {
@@ -75,7 +87,7 @@ async function callAI(text, provider, apiKey) {
       headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
       buildBody: (messages) => JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: 3000,
+        max_tokens: 1500,
         system: SYSTEM_PROMPT,
         messages: messages.filter((m) => m.role !== 'system'),
       }),
@@ -86,14 +98,14 @@ async function callAI(text, provider, apiKey) {
       url: 'https://api.mistral.ai/v1/chat/completions',
       model: 'mistral-small-latest',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      buildBody: (messages) => JSON.stringify({ model: 'mistral-small-latest', messages, temperature: 0.2, max_tokens: 3000 }),
+      buildBody: (messages) => JSON.stringify({ model: 'mistral-small-latest', messages, temperature: 0.2, max_tokens: 1500 }),
       extract: (data) => data.choices[0].message.content,
     },
     gemini: {
       url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
       model: 'gemini-2.5-flash',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      buildBody: (messages) => JSON.stringify({ model: 'gemini-2.5-flash', messages, temperature: 0.2, max_tokens: 3000 }),
+      buildBody: (messages) => JSON.stringify({ model: 'gemini-2.5-flash', messages, temperature: 0.2, max_tokens: 1500 }),
       extract: (data) => data.choices[0].message.content,
       mergeSystemIntoUser: true,
     },
@@ -133,11 +145,22 @@ function parseAnalysis(raw) {
   if (cleaned.startsWith('```')) {
     cleaned = cleaned.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
   }
-  const parsed = JSON.parse(cleaned);
-  if (!parsed.resume || !parsed.pointsForts) {
-    throw new Error('Réponse IA incomplète');
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (!parsed.resume || !parsed.pointsForts) {
+      throw new Error('Réponse IA incomplète');
+    }
+    return parsed;
+  } catch {
+    return {
+      resume: cleaned.slice(0, 500),
+      pointsForts: [],
+      pointsAttention: [],
+      axesAmelioration: [],
+      metriques: null,
+      repartition: null,
+    };
   }
-  return parsed;
 }
 
 export async function POST(request) {
