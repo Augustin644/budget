@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { callGemini, parseJSON } from '@/lib/ai';
+import { callAI, parseJSON } from '@/lib/ai';
 
 const SYSTEM_PROMPT = `Tu es un conseiller financier pédagogue. Analyses un portefeuille et retourne un diagnostic JSON structuré.
 
@@ -70,7 +70,7 @@ function parseAnalysis(raw) {
 
 export async function POST(request) {
   try {
-    const { investments, accounts, apiKey } = await request.json();
+    const { investments, accounts, apiKey, provider } = await request.json();
 
     if (!investments || investments.length === 0) {
       return NextResponse.json({ error: 'Aucun investissement fourni' }, { status: 400 });
@@ -82,7 +82,7 @@ export async function POST(request) {
     const portfolioData = formatPortfolioData(investments, accounts);
     const userPrompt = `Analyse ce portefeuille et fournis un diagnostic structuré.\n\n${JSON.stringify(portfolioData)}`;
 
-    const raw = await callGemini(SYSTEM_PROMPT, userPrompt, apiKey);
+    const raw = await callAI(SYSTEM_PROMPT, userPrompt, apiKey, provider || 'gemini');
     const analysis = parseAnalysis(raw);
 
     return NextResponse.json({ analysis });

@@ -47,6 +47,7 @@ export default function ScanPage() {
   const router = useRouter();
 
   const apiKey = typeof window !== 'undefined' ? localStorage.getItem('ai_api_key') || '' : '';
+  const aiProvider = typeof window !== 'undefined' ? localStorage.getItem('ai_provider') || 'gemini' : 'gemini';
 
   if (authLoading) {
     return <div className="flex items-center justify-center min-h-[50vh] text-gray-400">Chargement...</div>;
@@ -105,7 +106,7 @@ export default function ScanPage() {
       const res = await fetch('/api/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: extractedText, apiKey }),
+        body: JSON.stringify({ text: extractedText, apiKey, provider: aiProvider }),
       });
 
       const data = await res.json();

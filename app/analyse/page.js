@@ -18,6 +18,7 @@ export default function AnalysePage() {
   const handleAnalyze = useCallback(async () => {
     setLoading(true);
     try {
+      const provider = typeof window !== 'undefined' ? localStorage.getItem('ai_provider') : null;
       const apiKey = typeof window !== 'undefined' ? localStorage.getItem('ai_api_key') : null;
 
       if (!apiKey) {
@@ -51,7 +52,7 @@ export default function AnalysePage() {
       const res = await fetch('/api/portfolio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ investments: safeInv, accounts: safeAcc, apiKey }),
+        body: JSON.stringify({ investments: safeInv, accounts: safeAcc, apiKey, provider: provider || 'gemini' }),
       });
 
       const data = await res.json().catch(() => null);
