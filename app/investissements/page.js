@@ -80,9 +80,17 @@ export default function InvestissementsPage() {
       const apiKey = typeof window !== 'undefined' ? localStorage.getItem('ai_api_key') : null;
 
       if (!apiKey) {
-        addToast({ type: 'error', message: 'Configurez votre clé AI dans les paramètres' });
+        addToast({ type: 'error', message: 'Aucune clé AI configurée. Allez dans Paramètres > Config AI.' });
         return;
       }
+
+      if (!investments || investments.length === 0) {
+        addToast({ type: 'error', message: 'Aucun investissement à analyser.' });
+        return;
+      }
+
+      const usedProvider = provider || 'gemini';
+      addToast({ type: 'info', message: `Analyse avec ${usedProvider}...` });
 
       const res = await fetch('/api/portfolio', {
         method: 'POST',
@@ -90,13 +98,13 @@ export default function InvestissementsPage() {
         body: JSON.stringify({
           investments,
           accounts,
-          provider: provider || 'openai',
+          provider: usedProvider,
           apiKey,
         }),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erreur lors de l\'analyse');
+      if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
 
       setAnalysis(data.analysis);
 
@@ -105,8 +113,10 @@ export default function InvestissementsPage() {
         analysis: data.analysis,
         positionsCount: investments.length,
       });
+
+      addToast({ type: 'success', message: 'Analyse terminée !' });
     } catch (err) {
-      addToast({ type: 'error', message: err.message || 'Erreur lors de l\'analyse' });
+      addToast({ type: 'error', message: `Erreur : ${err.message}` });
     } finally {
       setAnalysisLoading(false);
     }

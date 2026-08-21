@@ -152,10 +152,11 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Clé API non configurée' }, { status: 400 });
     }
 
+    const usedProvider = provider || 'gemini';
     const portfolioText = formatPortfolioData(investments, accounts);
     const prompt = `Analyse ce portefeuille et fournis un diagnostic structuré.\n\n${portfolioText}`;
 
-    const raw = await callAI(prompt, provider, apiKey);
+    const raw = await callAI(prompt, usedProvider, apiKey);
     const analysis = parseAnalysis(raw);
 
     return NextResponse.json({ analysis });
