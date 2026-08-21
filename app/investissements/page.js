@@ -1,7 +1,9 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useCollection } from '@/app/hooks/useCollection';
+import { collection, addDoc, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import Card from '@/app/components/ui/Card';
 import Button from '@/app/components/ui/Button';
 import Input from '@/app/components/ui/Input';
@@ -43,9 +45,7 @@ export default function InvestissementsPage() {
   const [saving, setSaving] = useState(false);
   const [analysis, setAnalysis] = useState(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
-
-  const { add: addAnalysis } = useCollection('portfolioAnalysis');
-  const { data: analysisHistory } = useCollection('portfolioAnalysis', { orderBy: 'createdAt', orderDir: 'desc' });
+  const [analysisHistory, setAnalysisHistory] = useState([]);
 
   const loading = authLoading || accountsLoading || investmentsLoading;
 
@@ -71,6 +71,21 @@ export default function InvestissementsPage() {
       else next.add(name);
       return next;
     });
+  };
+
+  const loadAnalysisHistory = async () => {
+    if (!user) return;
+    try {
+      const q = query(
+        collection(db, `users/${user.uid}/portfolioAnalysis`),
+        orderBy('createdAt', 'desc'),
+        limit(10)
+      );
+      const snap = await getDocs(q);
+      setAnalysisHistory(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch {
+      setAnalysisHistory([]);
+    }
   };
 
   const handleAnalyze = async () => {
@@ -108,11 +123,21 @@ export default function InvestissementsPage() {
 
       setAnalysis(data.analysis);
 
-      await addAnalysis({
-        date: getToday(),
-        analysis: data.analysis,
-        positionsCount: investments.length,
-      });
+      try {
+        if (user) {
+          const now = new Date().toISOString();
+          await addDoc(collection(db, `users/${user.uid}/portfolioAnalysis`), {
+            date: getToday(),
+            analysis: data.analysis,
+            positionsCount: investments.length,
+            createdAt: now,
+            updatedAt: now,
+          });
+          await loadAnalysisHistory();
+        }
+      } catch {
+        // sauvegarde échouée, pas grave
+      }
 
       addToast({ type: 'success', message: 'Analyse terminée !' });
     } catch (err) {
@@ -121,6 +146,10 @@ export default function InvestissementsPage() {
       setAnalysisLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user) loadAnalysisHistory();
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const globalChartData = useMemo(() => {
     if (sortedHistory.length === 0) return [];
