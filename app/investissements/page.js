@@ -11,7 +11,6 @@ import Badge from '@/app/components/ui/Badge';
 import ConfirmDialog from '@/app/components/ui/ConfirmDialog';
 import { useToast } from '@/app/components/ui/Toast';
 import EmptyState from '@/app/components/ui/EmptyState';
-import PortfolioAnalysis from '@/app/components/investments/PortfolioAnalysis';
 import { formatCurrency, formatPercent, formatNumber } from '@/utils/currency';
 import { getToday, getMonthLabel } from '@/utils/dates';
 import { calculatePortfolioTotals, calculatePatrimoine } from '@/utils/patrimoine';
@@ -41,8 +40,6 @@ export default function InvestissementsPage() {
   const [activePositions, setActivePositions] = useState(new Set());
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [analysis, setAnalysis] = useState(null);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
 
   const loading = authLoading || accountsLoading || investmentsLoading;
 
@@ -68,48 +65,6 @@ export default function InvestissementsPage() {
       else next.add(name);
       return next;
     });
-  };
-
-  const handleAnalyze = async () => {
-    setAnalysisLoading(true);
-    try {
-      const provider = typeof window !== 'undefined' ? localStorage.getItem('ai_provider') : null;
-      const apiKey = typeof window !== 'undefined' ? localStorage.getItem('ai_api_key') : null;
-
-      if (!apiKey) {
-        addToast({ type: 'error', message: 'Aucune clé AI configurée. Allez dans Paramètres > Config AI.' });
-        return;
-      }
-
-      if (!investments || investments.length === 0) {
-        addToast({ type: 'error', message: 'Aucun investissement à analyser.' });
-        return;
-      }
-
-      const usedProvider = provider || 'gemini';
-      addToast({ type: 'info', message: `Analyse avec ${usedProvider}...` });
-
-      const res = await fetch('/api/portfolio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          investments,
-          accounts,
-          provider: usedProvider,
-          apiKey,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
-
-      setAnalysis(data.analysis);
-      addToast({ type: 'success', message: 'Analyse terminée !' });
-    } catch (err) {
-      addToast({ type: 'error', message: `Erreur : ${err.message}` });
-    } finally {
-      setAnalysisLoading(false);
-    }
   };
 
   const globalChartData = useMemo(() => {
@@ -416,15 +371,6 @@ export default function InvestissementsPage() {
             </Card>
           )}
         </div>
-      )}
-
-      {investments.length > 0 && (
-        <PortfolioAnalysis
-          analysis={analysis}
-          history={[]}
-          onAnalyze={handleAnalyze}
-          loading={analysisLoading}
-        />
       )}
 
       {investments.length === 0 ? (
