@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useCollection } from '@/app/hooks/useCollection';
 import PortfolioAnalysis from '@/app/components/investments/PortfolioAnalysis';
@@ -15,29 +15,19 @@ export default function AnalysePage() {
 
   const isLoading = authLoading || accountsLoading || investmentsLoading;
 
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-[50vh] text-gray-400">Chargement...</div>;
-  }
-
-  if (!user) {
-    return <div className="flex items-center justify-center min-h-[50vh] text-gray-400">Connectez-vous</div>;
-  }
-
-  const handleAnalyze = async () => {
+  const handleAnalyze = useCallback(async () => {
     setLoading(true);
     try {
       const provider = typeof window !== 'undefined' ? localStorage.getItem('ai_provider') : null;
       const apiKey = typeof window !== 'undefined' ? localStorage.getItem('ai_api_key') : null;
 
       if (!apiKey) {
-        addToast({ type: 'error', message: 'Aucune cle AI. Allez dans Parametres.' });
-        setLoading(false);
+        addToast('Aucune cle AI. Allez dans Parametres.', 'error');
         return;
       }
 
       if (!investments || investments.length === 0) {
-        addToast({ type: 'error', message: 'Aucun investissement.' });
-        setLoading(false);
+        addToast('Aucun investissement.', 'error');
         return;
       }
 
@@ -78,13 +68,21 @@ export default function AnalysePage() {
         axesAmelioration: Array.isArray(a.axesAmelioration) ? a.axesAmelioration : [],
         metriques: a.metriques || null,
       });
-      addToast({ type: 'success', message: 'Analyse terminee !' });
+      addToast('Analyse terminee !', 'success');
     } catch (err) {
-      addToast({ type: 'error', message: 'Erreur : ' + String(err?.message || err) });
+      addToast(`Erreur : ${String(err?.message || err)}`, 'error');
     } finally {
       setLoading(false);
     }
-  };
+  }, [investments, accounts, addToast]);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-[50vh] text-gray-400">Chargement...</div>;
+  }
+
+  if (!user) {
+    return <div className="flex items-center justify-center min-h-[50vh] text-gray-400">Connectez-vous</div>;
+  }
 
   return (
     <div className="space-y-6">
