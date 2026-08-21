@@ -90,19 +90,46 @@ export default function InvestissementsPage() {
 
       const usedProvider = provider || 'gemini';
 
+      const safeInvestments = investments.map((inv) => ({
+        name: String(inv.name || ''),
+        type: String(inv.type || ''),
+        quantity: Number(inv.quantity) || 0,
+        averageCost: Number(inv.averageCost) || 0,
+        currentPrice: Number(inv.currentPrice) || 0,
+        investedAmount: Number(inv.investedAmount) || 0,
+        currentValue: Number(inv.currentValue) || 0,
+        gainLoss: Number(inv.gainLoss) || 0,
+        gainLossPercent: Number(inv.gainLossPercent) || 0,
+      }));
+
+      const safeAccounts = (accounts || []).map((a) => ({
+        name: String(a.name || ''),
+        type: String(a.type || ''),
+        balance: Number(a.balance) || 0,
+      }));
+
+      const body = JSON.stringify({
+        investments: safeInvestments,
+        accounts: safeAccounts,
+        provider: usedProvider,
+        apiKey,
+      });
+
       const res = await fetch('/api/portfolio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          investments,
-          accounts,
-          provider: usedProvider,
-          apiKey,
-        }),
+        body,
+        signal: AbortSignal.timeout(15000),
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error('Reponse invalide du serveur (timeout ou erreur)');
+      }
       if (!res.ok) throw new Error(data.error || 'Erreur ' + res.status);
+      if (!data.analysis) throw new Error('Aucune analyse recue');
 
       setAnalysis(data.analysis);
       addToast({ type: 'success', message: 'Analyse terminee !' });

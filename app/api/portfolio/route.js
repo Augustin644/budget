@@ -48,17 +48,16 @@ function formatPortfolioData(investments, accounts) {
   });
 }
 
-async function fetchWithRetry(url, options, retries = 2, delay = 2000) {
+async function fetchWithRetry(url, options, retries = 1, delay = 1500) {
   for (let i = 0; i <= retries; i++) {
     const res = await fetch(url, options);
     if (res.ok) return res;
     if (i < retries && (res.status === 503 || res.status === 429 || res.status === 500)) {
-      await new Promise((r) => setTimeout(r, delay * (i + 1)));
+      await new Promise((r) => setTimeout(r, delay));
       continue;
     }
     return res;
   }
-  throw new Error('Service temporairement indisponible, réessayez dans quelques instants');
 }
 
 async function callAI(text, provider, apiKey) {
