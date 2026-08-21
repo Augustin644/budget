@@ -108,33 +108,33 @@ export default function InvestissementsPage() {
         balance: Number(a.balance) || 0,
       }));
 
-      const body = JSON.stringify({
-        investments: safeInvestments,
-        accounts: safeAccounts,
-        provider: usedProvider,
-        apiKey,
-      });
-
       const res = await fetch('/api/portfolio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body,
-        signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({
+          investments: safeInvestments,
+          accounts: safeAccounts,
+          provider: usedProvider,
+          apiKey,
+        }),
       });
 
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error('Reponse invalide du serveur (timeout ou erreur)');
-      }
-      if (!res.ok) throw new Error(data.error || 'Erreur ' + res.status);
-      if (!data.analysis) throw new Error('Aucune analyse recue');
+      const data = await res.json().catch(() => (null));
+      if (!res.ok) throw new Error(data?.error || 'Erreur serveur');
+      if (!data?.analysis) throw new Error('Pas de donnees');
 
-      setAnalysis(data.analysis);
+      const a = data.analysis;
+      setAnalysis({
+        resume: String(a.resume || ''),
+        repartition: a.repartition || null,
+        pointsForts: Array.isArray(a.pointsForts) ? a.pointsForts : [],
+        pointsAttention: Array.isArray(a.pointsAttention) ? a.pointsAttention : [],
+        axesAmelioration: Array.isArray(a.axesAmelioration) ? a.axesAmelioration : [],
+        metriques: a.metriques || null,
+      });
       addToast({ type: 'success', message: 'Analyse terminee !' });
     } catch (err) {
-      addToast({ type: 'error', message: 'Erreur : ' + err.message });
+      addToast({ type: 'error', message: 'Erreur : ' + String(err?.message || err) });
     } finally {
       setAnalysisLoading(false);
     }
