@@ -51,7 +51,7 @@ function formatPortfolioData(investments, accounts) {
 async function fetchWithRetry(url, options, retries = 0, delay = 1500) {
   for (let i = 0; i <= retries; i++) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 7000);
+    const timer = setTimeout(() => controller.abort(), 8500);
     try {
       const res = await fetch(url, { ...options, signal: controller.signal });
       clearTimeout(timer);
@@ -102,12 +102,26 @@ async function callAI(text, provider, apiKey) {
       extract: (data) => data.choices[0].message.content,
     },
     gemini: {
-      url: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
-      model: 'gemini-2.5-flash',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-      buildBody: (messages) => JSON.stringify({ model: 'gemini-2.5-flash', messages, temperature: 0.2, max_tokens: 1500 }),
-      extract: (data) => data.choices[0].message.content,
-      mergeSystemIntoUser: true,
+      url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      model: 'gemini-2.0-flash',
+      headers: { 'Content-Type': 'application/json' },
+      buildBody: (messages) => {
+        const userMessages = messages.filter((m) => m.role !== 'system');
+        const systemMsg = messages.find((m) => m.role === 'system');
+        const body = {
+          contents: userMessages.map((m) => ({
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: m.content }],
+          })),
+          generationConfig: { temperature: 0.2, maxOutputTokens: 1500 },
+        };
+        if (systemMsg) {
+          body.systemInstruction = { parts: [{ text: systemMsg.content }] };
+        }
+        return JSON.stringify(body);
+      },
+      extract: (data) => data.candidates?.[0]?.content?.parts?.[0]?.text,
+      nativeApi: true,
     },
   };
 
