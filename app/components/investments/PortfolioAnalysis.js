@@ -3,7 +3,6 @@ import { useState } from 'react';
 import Card from '@/app/components/ui/Card';
 import Button from '@/app/components/ui/Button';
 import Badge from '@/app/components/ui/Badge';
-import { formatCurrency } from '@/utils/currency';
 
 const SEVERITY_COLORS = {
   faible: 'text-yellow-400',
