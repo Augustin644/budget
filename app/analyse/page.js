@@ -10,10 +10,13 @@ export default function AnalysePage() {
   const { addToast } = useToast();
   const { data: accounts, loading: accountsLoading } = useCollection('accounts');
   const { data: investments, loading: investmentsLoading } = useCollection('investments');
+  const { data: credits, loading: creditsLoading } = useCollection('credits');
+  const { data: transactions, loading: transactionsLoading } = useCollection('transactions');
+  const { data: categories, loading: categoriesLoading } = useCollection('categories');
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const isLoading = authLoading || accountsLoading || investmentsLoading;
+  const isLoading = authLoading || accountsLoading || investmentsLoading || creditsLoading || transactionsLoading || categoriesLoading;
 
   const handleAnalyze = useCallback(async () => {
     setLoading(true);
@@ -26,12 +29,15 @@ export default function AnalysePage() {
         return;
       }
 
-      if (!investments || investments.length === 0) {
-        addToast('Aucun investissement.', 'error');
-        return;
-      }
+      const safeAcc = (accounts || []).map((a) => ({
+        name: String(a.name || ''),
+        bank: String(a.bank || ''),
+        type: String(a.type || ''),
+        balance: Number(a.balance) || 0,
+        interestRate: Number(a.interestRate) || 0,
+      }));
 
-      const safeInv = investments.map((i) => ({
+      const safeInv = (investments || []).map((i) => ({
         name: String(i.name || ''),
         type: String(i.type || ''),
         quantity: Number(i.quantity) || 0,
@@ -43,38 +49,59 @@ export default function AnalysePage() {
         gainLossPercent: Number(i.gainLossPercent) || 0,
       }));
 
-      const safeAcc = (accounts || []).map((a) => ({
-        name: String(a.name || ''),
-        type: String(a.type || ''),
-        balance: Number(a.balance) || 0,
+      const safeCredits = (credits || []).map((c) => ({
+        name: String(c.name || ''),
+        bank: String(c.bank || ''),
+        principal: Number(c.principal) || 0,
+        remainingBalance: Number(c.remainingBalance) || 0,
+        annualRate: Number(c.annualRate) || 0,
+        monthlyPayment: Number(c.monthlyPayment) || 0,
+        insurance: Number(c.insurance) || 0,
+        totalMonthly: Number(c.totalMonthly) || 0,
+        durationMonths: Number(c.durationMonths) || 0,
+        startDate: String(c.startDate || ''),
+        endDate: String(c.endDate || ''),
+      }));
+
+      const safeTx = (transactions || []).slice(-100).map((t) => ({
+        date: String(t.date || ''),
+        type: String(t.type || ''),
+        amount: Number(t.amount) || 0,
+        description: String(t.description || ''),
+      }));
+
+      const safeCat = (categories || []).map((c) => ({
+        name: String(c.name || ''),
+        type: String(c.type || ''),
+        budgetMonthly: Number(c.budgetMonthly) || 0,
       }));
 
       const res = await fetch('/api/portfolio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ investments: safeInv, accounts: safeAcc, apiKey, provider: provider || 'gemini' }),
+        body: JSON.stringify({
+          accounts: safeAcc,
+          investments: safeInv,
+          credits: safeCredits,
+          transactions: safeTx,
+          categories: safeCat,
+          apiKey,
+          provider: provider || 'gemini',
+        }),
       });
 
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || 'Erreur serveur');
       if (!data?.analysis) throw new Error('Pas de donnees');
 
-      const a = data.analysis;
-      setAnalysis({
-        resume: String(a.resume || ''),
-        repartition: a.repartition || null,
-        pointsForts: Array.isArray(a.pointsForts) ? a.pointsForts : [],
-        pointsAttention: Array.isArray(a.pointsAttention) ? a.pointsAttention : [],
-        axesAmelioration: Array.isArray(a.axesAmelioration) ? a.axesAmelioration : [],
-        metriques: a.metriques || null,
-      });
+      setAnalysis(data.analysis);
       addToast('Analyse terminee !', 'success');
     } catch (err) {
       addToast(`Erreur : ${String(err?.message || err)}`, 'error');
     } finally {
       setLoading(false);
     }
-  }, [investments, accounts, addToast]);
+  }, [accounts, investments, credits, transactions, categories, addToast]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-[50vh] text-gray-400">Chargement...</div>;
@@ -87,8 +114,8 @@ export default function AnalysePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Analyse IA</h1>
-        <p className="text-sm text-gray-400 mt-1">Diagnostic intelligent de votre portefeuille</p>
+        <h1 className="text-2xl font-bold text-white">Analyse Patrimoine</h1>
+        <p className="text-sm text-gray-400 mt-1">Diagnostic complet de votre situation financière par IA</p>
       </div>
       <PortfolioAnalysis analysis={analysis} onAnalyze={handleAnalyze} loading={loading} />
     </div>

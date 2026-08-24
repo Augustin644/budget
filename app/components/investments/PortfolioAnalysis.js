@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Card from '@/app/components/ui/Card';
 import Button from '@/app/components/ui/Button';
 import Badge from '@/app/components/ui/Badge';
+import { formatCurrency } from '@/utils/currency';
 
 export default function PortfolioAnalysis({ analysis, onAnalyze, loading }) {
   const [expanded, setExpanded] = useState(true);
@@ -12,13 +13,13 @@ export default function PortfolioAnalysis({ analysis, onAnalyze, loading }) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Analyse IA</h3>
-          <Button size="sm" onClick={onAnalyze}>Analyser</Button>
+          <Button size="sm" onClick={onAnalyze}>Analyser mon patrimoine</Button>
         </div>
         <Card>
           <div className="text-center py-8">
-            <span className="text-4xl mb-4 block">📊</span>
-            <p className="text-gray-400 mb-2">Analysez votre portefeuille avec l&apos;IA</p>
-            <p className="text-xs text-gray-500">Cliquez &quot;Analyser&quot; pour lancer un diagnostic</p>
+            <span className="text-4xl mb-4 block">🧮</span>
+            <p className="text-gray-400 mb-2">Analysez l&apos;ensemble de votre patrimoine avec l&apos;IA</p>
+            <p className="text-xs text-gray-500">Comptes, investissements, crédits, revenus, dépenses, budgets</p>
           </div>
         </Card>
       </div>
@@ -36,8 +37,8 @@ export default function PortfolioAnalysis({ analysis, onAnalyze, loading }) {
           <div className="text-center py-8">
             <div className="animate-pulse">
               <span className="text-4xl mb-4 block">🔍</span>
-              <p className="text-gray-400">Analyse en cours...</p>
-              <p className="text-xs text-gray-500 mt-1">L&apos;IA examine votre portefeuille</p>
+              <p className="text-gray-400">Analyse de votre patrimoine en cours...</p>
+              <p className="text-xs text-gray-500 mt-1">L&apos;IA examine comptes, investissements, crédits, budgets...</p>
             </div>
           </div>
         </Card>
@@ -50,7 +51,7 @@ export default function PortfolioAnalysis({ analysis, onAnalyze, loading }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Analyse IA</h3>
+        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Analyse Patrimoine</h3>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)}>
             {expanded ? 'Réduire' : 'Développer'}
@@ -69,45 +70,162 @@ export default function PortfolioAnalysis({ analysis, onAnalyze, loading }) {
             <Card className="border-[#39F6D6]/20">
               <h4 className="text-xs text-gray-500 mb-2">Résumé</h4>
               <p className="text-sm text-gray-300 leading-relaxed">{analysis.resume}</p>
-              {analysis.metriques && (
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {analysis.metriques.diversification && (
-                    <div className="bg-[#0B0F1A] rounded-lg px-3 py-2">
-                      <span className="text-xs text-gray-500">Diversification: </span>
-                      <span className="text-sm font-bold text-[#39F6D6]">{analysis.metriques.diversification}</span>
-                    </div>
-                  )}
-                  {analysis.metriques.risqueGlobal && (
-                    <div className="bg-[#0B0F1A] rounded-lg px-3 py-2">
-                      <span className="text-xs text-gray-500">Risque: </span>
-                      <span className="text-sm font-bold text-[#9B6BFF]">{analysis.metriques.risqueGlobal}</span>
-                    </div>
-                  )}
-                  {analysis.metriques.coutEstime && (
-                    <div className="bg-[#0B0F1A] rounded-lg px-3 py-2">
-                      <span className="text-xs text-gray-500">Frais: </span>
-                      <span className="text-sm font-bold text-white">{analysis.metriques.coutEstime}</span>
-                    </div>
-                  )}
+            </Card>
+          )}
+
+          {analysis.bilan && (
+            <Card>
+              <h4 className="text-xs text-gray-500 mb-3">Bilan patrimonial</h4>
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="bg-[#0B0F1A] rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">Actifs</p>
+                  <p className="text-sm font-bold text-[#39F6D6]">{formatCurrency(analysis.bilan.totalActifs || 0)}</p>
                 </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">Passifs</p>
+                  <p className="text-sm font-bold text-red-400">{formatCurrency(analysis.bilan.totalPassifs || 0)}</p>
+                </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-3 text-center">
+                  <p className="text-xs text-gray-500">Patrimoine net</p>
+                  <p className="text-sm font-bold text-[#9B6BFF]">{formatCurrency(analysis.bilan.patrimoineNet || 0)}</p>
+                </div>
+              </div>
+              {analysis.bilan.description && (
+                <p className="text-xs text-gray-400">{analysis.bilan.description}</p>
               )}
             </Card>
           )}
 
-          {analysis.repartition?.parType && Object.keys(analysis.repartition.parType).length > 0 && (
+          {analysis.repartition && (
             <Card>
-              <h4 className="text-xs text-gray-500 mb-2">Répartition</h4>
-              {analysis.repartition.description && (
-                <p className="text-sm text-gray-300 mb-3">{analysis.repartition.description}</p>
+              <h4 className="text-xs text-gray-500 mb-3">Répartition</h4>
+              {analysis.repartition.parType && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {Object.entries(analysis.repartition.parType).map(([type, val]) => (
+                    <div key={type} className="bg-[#0B0F1A] rounded-lg px-3 py-1.5">
+                      <span className="text-xs text-gray-400">{type}: </span>
+                      <span className="text-sm font-bold text-white">{typeof val === 'number' ? formatCurrency(val) : String(val)}</span>
+                    </div>
+                  ))}
+                </div>
               )}
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(analysis.repartition.parType).map(([type, pct]) => (
-                  <div key={type} className="flex items-center gap-2 bg-[#0B0F1A] rounded-lg px-3 py-1.5">
-                    <span className="text-xs text-gray-400">{type}</span>
-                    <span className="text-sm font-bold text-white">{String(pct)}%</span>
-                  </div>
-                ))}
+              {analysis.repartition.description && (
+                <p className="text-xs text-gray-400">{analysis.repartition.description}</p>
+              )}
+            </Card>
+          )}
+
+          {analysis.fluxFinanciers && (
+            <Card>
+              <h4 className="text-xs text-gray-500 mb-3">Flux financiers mensuels</h4>
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Revenus</p>
+                  <p className="text-sm font-bold text-[#39F6D6]">{formatCurrency(analysis.fluxFinanciers.revenuMensuel || 0)}</p>
+                </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Dépenses</p>
+                  <p className="text-sm font-bold text-[#9B6BFF]">{formatCurrency(analysis.fluxFinanciers.depenseMensuelle || 0)}</p>
+                </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Épargne</p>
+                  <p className="text-sm font-bold text-white">{formatCurrency(analysis.fluxFinanciers.epargneMensuelle || 0)}</p>
+                </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Taux épargne</p>
+                  <p className="text-sm font-bold text-[#39F6D6]">{String(analysis.fluxFinanciers.tauxEpargne || 0)}%</p>
+                </div>
               </div>
+              {analysis.fluxFinanciers.description && (
+                <p className="text-xs text-gray-400">{analysis.fluxFinanciers.description}</p>
+              )}
+            </Card>
+          )}
+
+          {analysis.budget && (
+            <Card>
+              <h4 className="text-xs text-gray-500 mb-3">Analyse budget</h4>
+              {analysis.budget.categoriesSuralimentees?.length > 0 && (
+                <div className="mb-2">
+                  <p className="text-xs text-red-400 mb-1">Dépassements de budget</p>
+                  {analysis.budget.categoriesSuralimentees.map((cat, i) => (
+                    <div key={i} className="bg-[#0B0F1A] rounded-lg px-3 py-1.5 mb-1 flex justify-between text-xs">
+                      <span className="text-gray-400">{safe(cat.nom)}</span>
+                      <span className="text-red-400">+{formatCurrency(cat.ecart || 0)} ({formatCurrency(cat.depenseReelle || 0)}/{formatCurrency(cat.budget || 0)})</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {analysis.budget.description && (
+                <p className="text-xs text-gray-400 mt-2">{analysis.budget.description}</p>
+              )}
+            </Card>
+          )}
+
+          {analysis.credits && (
+            <Card>
+              <h4 className="text-xs text-gray-500 mb-3">Crédits</h4>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Restant dû</p>
+                  <p className="text-sm font-bold text-red-400">{formatCurrency(analysis.credits.totalRestant || 0)}</p>
+                </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Mensualité totale</p>
+                  <p className="text-sm font-bold text-[#9B6BFF]">{formatCurrency(analysis.credits.mensualiteTotale || 0)}</p>
+                </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Taux endettement</p>
+                  <p className="text-sm font-bold text-white">{String(analysis.credits.chargeEndettement || 0)}%</p>
+                </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Durée restante</p>
+                  <p className="text-sm font-bold text-white">{String(analysis.credits.dureeRestanteMois || 0)} mois</p>
+                </div>
+              </div>
+              {analysis.credits.analyse && (
+                <p className="text-xs text-gray-400 mb-1">{analysis.credits.analyse}</p>
+              )}
+              {analysis.credits.optimisation && (
+                <p className="text-xs text-[#39F6D6]">Optimisation : {analysis.credits.optimisation}</p>
+              )}
+            </Card>
+          )}
+
+          {analysis.investissements && (
+            <Card>
+              <h4 className="text-xs text-gray-500 mb-3">Investissements</h4>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Investi</p>
+                  <p className="text-sm font-bold text-white">{formatCurrency(analysis.investissements.totalInvesti || 0)}</p>
+                </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Valeur actuelle</p>
+                  <p className="text-sm font-bold text-[#39F6D6]">{formatCurrency(analysis.investissements.valeurActuelle || 0)}</p>
+                </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Plus-value</p>
+                  <p className={`text-sm font-bold ${(analysis.investissements.plusValue || 0) >= 0 ? 'text-[#39F6D6]' : 'text-red-400'}`}>
+                    {formatCurrency(analysis.investissements.plusValue || 0)} ({String(analysis.investissements.plusValuePct || 0)}%)
+                  </p>
+                </div>
+              </div>
+              {analysis.investissements.repartition && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {Object.entries(analysis.investissements.repartition).map(([type, val]) => (
+                    val ? (
+                      <div key={type} className="bg-[#0B0F1A] rounded-lg px-3 py-1.5">
+                        <span className="text-xs text-gray-400">{type}: </span>
+                        <span className="text-sm font-bold text-white">{typeof val === 'number' ? formatCurrency(val) : String(val)}</span>
+                      </div>
+                    ) : null
+                  ))}
+                </div>
+              )}
+              {analysis.investissements.analyse && (
+                <p className="text-xs text-gray-400">{analysis.investissements.analyse}</p>
+              )}
             </Card>
           )}
 
@@ -135,7 +253,7 @@ export default function PortfolioAnalysis({ analysis, onAnalyze, loading }) {
                 {analysis.pointsAttention.map((item, i) => (
                   <div key={i} className="bg-[#0B0F1A] rounded-lg p-3">
                     <div className="flex items-start justify-between gap-2">
-                      <h5 className="text-sm font-medium text-orange-400">{safe(item.titre, 'Point d\'attention')}</h5>
+                      <h5 className="text-sm font-medium text-orange-400">{safe(item.titre, 'Attention')}</h5>
                       {item.severite && <Badge variant={item.severite === 'élevé' ? 'danger' : 'warning'}>{item.severite}</Badge>}
                     </div>
                     <p className="text-xs text-gray-400 mt-1">{safe(item.explication)}</p>
@@ -146,42 +264,68 @@ export default function PortfolioAnalysis({ analysis, onAnalyze, loading }) {
             </Card>
           )}
 
-          {Array.isArray(analysis.axesAmelioration) && analysis.axesAmelioration.length > 0 && (
+          {Array.isArray(analysis.actionsRecommandees) && analysis.actionsRecommandees.length > 0 && (
             <Card>
-              <h4 className="text-xs text-gray-500 mb-3">Axes d&apos;amelioration</h4>
+              <h4 className="text-xs text-gray-500 mb-3">Actions recommandées</h4>
               <div className="space-y-3">
-                {analysis.axesAmelioration.map((item, i) => (
+                {analysis.actionsRecommandees.map((item, i) => (
                   <div key={i} className="bg-[#0B0F1A] rounded-lg p-3">
-                    <h5 className="text-sm font-medium text-[#9B6BFF]">{safe(item.titre, 'Axe')}</h5>
+                    <div className="flex items-start justify-between gap-2">
+                      <h5 className="text-sm font-medium text-white">{safe(item.titre, 'Action')}</h5>
+                      {item.priorite && (
+                        <Badge variant={item.priorite === 'haute' ? 'danger' : item.priorite === 'moyenne' ? 'warning' : 'default'}>
+                          {item.priorite}
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-400 mt-1">{safe(item.explication)}</p>
-                    {(item.avantages?.length > 0 || item.inconvenients?.length > 0) && (
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        {item.avantages?.length > 0 && (
-                          <div>
-                            <p className="text-xs text-[#39F6D6] mb-1">Avantages</p>
-                            <ul className="text-xs text-gray-400 space-y-0.5">
-                              {item.avantages.map((a, j) => <li key={j}>- {String(a)}</li>)}
-                            </ul>
-                          </div>
-                        )}
-                        {item.inconvenients?.length > 0 && (
-                          <div>
-                            <p className="text-xs text-red-400 mb-1">Inconvenients</p>
-                            <ul className="text-xs text-gray-400 space-y-0.5">
-                              {item.inconvenients.map((a, j) => <li key={j}>- {String(a)}</li>)}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {item.impact && <p className="text-xs text-[#39F6D6] mt-1">Impact : {item.impact}</p>}
                   </div>
                 ))}
               </div>
             </Card>
           )}
 
+          {analysis.metriques && (
+            <Card>
+              <h4 className="text-xs text-gray-500 mb-3">Métriques clés</h4>
+              <div className="flex flex-wrap gap-2">
+                {analysis.metriques.tauxEndettement != null && (
+                  <div className="bg-[#0B0F1A] rounded-lg px-3 py-2">
+                    <span className="text-xs text-gray-500">Endettement: </span>
+                    <span className={`text-sm font-bold ${Number(analysis.metriques.tauxEndettement) > 35 ? 'text-red-400' : 'text-[#39F6D6]'}`}>{String(analysis.metriques.tauxEndettement)}%</span>
+                  </div>
+                )}
+                {analysis.metriques.tauxEpargne != null && (
+                  <div className="bg-[#0B0F1A] rounded-lg px-3 py-2">
+                    <span className="text-xs text-gray-500">Épargne: </span>
+                    <span className="text-sm font-bold text-[#39F6D6]">{String(analysis.metriques.tauxEpargne)}%</span>
+                  </div>
+                )}
+                {analysis.metriques.reserveLiquiditeMois != null && (
+                  <div className="bg-[#0B0F1A] rounded-lg px-3 py-2">
+                    <span className="text-xs text-gray-500">Réserve: </span>
+                    <span className="text-sm font-bold text-[#9B6BFF]">{String(analysis.metriques.reserveLiquiditeMois)} mois</span>
+                  </div>
+                )}
+                {analysis.metriques.diversification && (
+                  <div className="bg-[#0B0F1A] rounded-lg px-3 py-2">
+                    <span className="text-xs text-gray-500">Diversification: </span>
+                    <span className="text-sm font-bold text-[#39F6D6]">{String(analysis.metriques.diversification)}/10</span>
+                  </div>
+                )}
+                {analysis.metriques.risqueGlobal && (
+                  <div className="bg-[#0B0F1A] rounded-lg px-3 py-2">
+                    <span className="text-xs text-gray-500">Risque: </span>
+                    <span className="text-sm font-bold text-[#9B6BFF]">{String(analysis.metriques.risqueGlobal)}</span>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
+
           <p className="text-xs text-gray-600 text-center">
-            Analyse generee par IA a titre informatif uniquement.
+            Analyse générée par IA à titre informatif uniquement.
           </p>
         </>
       )}
