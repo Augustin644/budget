@@ -3,7 +3,9 @@ import { callAI, parseJSON } from '@/lib/ai';
 
 const SYSTEM_PROMPT = `Tu es un expert en gestion de patrimoine. Tu analyses la situation financière complète d'un particulier et retournes un diagnostic structuré.
 
-Tu analyses : comptes, épargne, investissements, crédits. Tu es pédagogue et factuel. Pas de conseils d'achat/vente d'actions.
+IMPORTANT: Les comptes de type PEA, CTO, Assurance-vie, Crypto, Non Coté, Immobilier sont des COMPTES-TITRES. Leur solde EST la valeur des investissements qu'ils contiennent. Ne les additionne PAS avec la valeur des investissements (ce serait du double comptage). Les investissements fournis séparément sont les positions DANS ces comptes.
+
+Tu analyses : comptes (liquidités + épargne), investissements (positions), crédits. Tu es pédagogue et factuel. Pas de conseils d'achat/vente d'actions.
 
 Réponds UNIQUEMENT avec ce JSON, sans texte avant/après :
 {
@@ -44,15 +46,27 @@ Réponds UNIQUEMENT avec ce JSON, sans texte avant/après :
   }
 }
 
-Règles: 2-5 éléments par tableau. Montants en euros. Ne jamais inventer de données absentes.`;
+Règles:
+- 2-5 éléments par tableau. Montants en euros. Ne jamais inventer de données absentes.
+- totalActifs = liquidités + épargne + valeur totale des investissements (PAS les soldes des comptes-titres)
+- chargeEndettement = mensualités dette / revenus estimés × 100`;
+
+const INVESTMENT_ACCOUNT_TYPES = ['PEA', 'CTO', 'Assurance-vie', 'Crypto', 'Non Coté', 'Immobilier'];
 
 function formatAllData(data) {
   const { accounts, investments, credits } = data;
+
+  const liquidites = (accounts || [])
+    .filter((a) => !INVESTMENT_ACCOUNT_TYPES.includes(a.type))
+    .map((a) => ({ name: a.name, bank: a.bank, type: a.type, balance: a.balance }));
+
+  const investAccounts = (accounts || [])
+    .filter((a) => INVESTMENT_ACCOUNT_TYPES.includes(a.type))
+    .map((a) => ({ name: a.name, type: a.type }));
+
   return {
-    accounts: (accounts || []).map((a) => ({
-      name: a.name, bank: a.bank, type: a.type, balance: a.balance, interestRate: a.interestRate,
-    })),
-    investments: (investments || []).map((inv) => ({
+    comptes: { liquiditesEpargne: liquidites, comptesTitres: investAccounts },
+    positions: (investments || []).map((inv) => ({
       name: inv.name, type: inv.type, invested: inv.investedAmount, value: inv.currentValue,
       pl: inv.gainLoss, plPct: inv.gainLossPercent,
     })),

@@ -1,9 +1,11 @@
 'use client';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { useCollection } from '@/app/hooks/useCollection';
 import PortfolioAnalysis from '@/app/components/investments/PortfolioAnalysis';
 import { useToast } from '@/app/components/ui/Toast';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 export default function AnalysePage() {
   const { user, loading: authLoading } = useAuth();
@@ -13,8 +15,53 @@ export default function AnalysePage() {
   const { data: credits, loading: creditsLoading } = useCollection('credits');
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
 
   const isLoading = authLoading || accountsLoading || investmentsLoading || creditsLoading;
+
+  useEffect(() => {
+    if (!user) return;
+    const loadHistory = async () => {
+      try {
+        const q = query(
+          collection(db, `users/${user.uid}/portfolioAnalysis`),
+          orderBy('createdAt', 'desc'),
+          limit(10)
+        );
+        const snap = await getDocs(q);
+        const items = [];
+        snap.forEach((d) => items.push({ id: d.id, ...d.data() }));
+        setHistory(items);
+      } catch {
+        setHistory([]);
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+    loadHistory();
+  }, [user]);
+
+  const saveToHistory = useCallback(async (result) => {
+    if (!user) return;
+    try {
+      await addDoc(collection(db, `users/${user.uid}/portfolioAnalysis`), {
+        analysis: result,
+        createdAt: new Date().toISOString(),
+      });
+      const q = query(
+        collection(db, `users/${user.uid}/portfolioAnalysis`),
+        orderBy('createdAt', 'desc'),
+        limit(10)
+      );
+      const snap = await getDocs(q);
+      const items = [];
+      snap.forEach((d) => items.push({ id: d.id, ...d.data() }));
+      setHistory(items);
+    } catch {
+      // silent
+    }
+  }, [user]);
 
   const handleAnalyze = useCallback(async () => {
     setLoading(true);
@@ -55,13 +102,18 @@ export default function AnalysePage() {
       if (!data?.analysis) throw new Error('Pas de donnees');
 
       setAnalysis(data.analysis);
+      saveToHistory(data.analysis);
       addToast('Analyse terminee !', 'success');
     } catch (err) {
       addToast(`Erreur : ${String(err?.message || err)}`, 'error');
     } finally {
       setLoading(false);
     }
-  }, [accounts, investments, credits, addToast]);
+  }, [accounts, investments, credits, addToast, saveToHistory]);
+
+  const handleSelectHistory = (item) => {
+    setAnalysis(item.analysis);
+  };
 
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-[50vh] text-gray-400">Chargement...</div>;
@@ -77,7 +129,43 @@ export default function AnalysePage() {
         <h1 className="text-2xl font-bold text-white">Analyse Patrimoine</h1>
         <p className="text-sm text-gray-400 mt-1">Diagnostic de votre situation financière par IA</p>
       </div>
+
       <PortfolioAnalysis analysis={analysis} onAnalyze={handleAnalyze} loading={loading} />
+
+      {history.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wider">Historique</h3>
+          <div className="space-y-2">
+            {history.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => handleSelectHistory(item)}
+                className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                  analysis?.resume === item.analysis?.resume
+                    ? 'border-[#39F6D6]/30 bg-[#39F6D6]/5'
+                    : 'border-[#1F2937] bg-[#0B0F1A] hover:border-[#39F6D6]/20'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-300 line-clamp-1">
+                    {item.analysis?.resume || 'Analyse'}
+                  </span>
+                  <span className="text-xs text-gray-500 ml-2 whitespace-nowrap">
+                    {new Date(item.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                {item.analysis?.bilan && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Patrimoine net : {item.analysis.bilan.patrimoineNet
+                      ? `${item.analysis.bilan.patrimoineNet.toLocaleString('fr-FR')} €`
+                      : '—'}
+                  </p>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
