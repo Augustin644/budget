@@ -73,26 +73,41 @@ export default function PortfolioAnalysis({ analysis, onAnalyze, loading }) {
             </Card>
           )}
 
-          {analysis.bilan && (
+          {analysis.totaux && (
             <Card>
               <h4 className="text-xs text-gray-500 mb-3">Bilan patrimonial</h4>
               <div className="grid grid-cols-3 gap-3 mb-3">
                 <div className="bg-[#0B0F1A] rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500">Actifs</p>
-                  <p className="text-sm font-bold text-[#39F6D6]">{formatCurrency(analysis.bilan.totalActifs || 0)}</p>
+                  <p className="text-sm font-bold text-[#39F6D6]">{formatCurrency(analysis.totaux.totalActifs || 0)}</p>
                 </div>
                 <div className="bg-[#0B0F1A] rounded-lg p-3 text-center">
-                  <p className="text-xs text-gray-500">Passifs</p>
-                  <p className="text-sm font-bold text-red-400">{formatCurrency(analysis.bilan.totalPassifs || 0)}</p>
+                  <p className="text-xs text-gray-500">Crédits</p>
+                  <p className="text-sm font-bold text-red-400">{formatCurrency(analysis.totaux.totalCredits || 0)}</p>
                 </div>
                 <div className="bg-[#0B0F1A] rounded-lg p-3 text-center">
                   <p className="text-xs text-gray-500">Patrimoine net</p>
-                  <p className="text-sm font-bold text-[#9B6BFF]">{formatCurrency(analysis.bilan.patrimoineNet || 0)}</p>
+                  <p className="text-sm font-bold text-[#9B6BFF]">{formatCurrency(analysis.totaux.patrimoineNet || 0)}</p>
                 </div>
               </div>
-              {analysis.bilan.description && (
-                <p className="text-xs text-gray-400">{analysis.bilan.description}</p>
-              )}
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Liquidités</p>
+                  <p className="text-xs font-bold text-white">{formatCurrency(analysis.totaux.liquiditesPure || 0)}</p>
+                </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Épargne</p>
+                  <p className="text-xs font-bold text-white">{formatCurrency(analysis.totaux.epargne || 0)}</p>
+                </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Invest.</p>
+                  <p className="text-xs font-bold text-white">{formatCurrency(analysis.totaux.valeurInvestissements || 0)}</p>
+                </div>
+                <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
+                  <p className="text-xs text-gray-500">Mensualité</p>
+                  <p className="text-xs font-bold text-white">{formatCurrency(analysis.totaux.mensualitesCredits || 0)}</p>
+                </div>
+              </div>
             </Card>
           )}
 
@@ -192,40 +207,32 @@ export default function PortfolioAnalysis({ analysis, onAnalyze, loading }) {
             </Card>
           )}
 
-          {analysis.investissements && (
+          {analysis.totaux && (
             <Card>
               <h4 className="text-xs text-gray-500 mb-3">Investissements</h4>
-              <div className="grid grid-cols-3 gap-2 mb-3">
+              <div className="grid grid-cols-3 gap-2">
                 <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
                   <p className="text-xs text-gray-500">Investi</p>
-                  <p className="text-sm font-bold text-white">{formatCurrency(analysis.investissements.totalInvesti || 0)}</p>
+                  <p className="text-sm font-bold text-white">{formatCurrency(analysis.totaux.totalInvesti || 0)}</p>
                 </div>
                 <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
-                  <p className="text-xs text-gray-500">Valeur actuelle</p>
-                  <p className="text-sm font-bold text-[#39F6D6]">{formatCurrency(analysis.investissements.valeurActuelle || 0)}</p>
+                  <p className="text-xs text-gray-500">Valeur</p>
+                  <p className="text-sm font-bold text-[#39F6D6]">{formatCurrency(analysis.totaux.valeurInvestissements || 0)}</p>
                 </div>
                 <div className="bg-[#0B0F1A] rounded-lg p-2 text-center">
                   <p className="text-xs text-gray-500">Plus-value</p>
-                  <p className={`text-sm font-bold ${(analysis.investissements.plusValue || 0) >= 0 ? 'text-[#39F6D6]' : 'text-red-400'}`}>
-                    {formatCurrency(analysis.investissements.plusValue || 0)} ({String(analysis.investissements.plusValuePct || 0)}%)
+                  <p className={`text-sm font-bold ${(analysis.totaux.plusValue || 0) >= 0 ? 'text-[#39F6D6]' : 'text-red-400'}`}>
+                    {formatCurrency(analysis.totaux.plusValue || 0)} ({String(analysis.totaux.plusValuePct || 0)}%)
                   </p>
                 </div>
               </div>
-              {analysis.investissements.repartition && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {Object.entries(analysis.investissements.repartition).map(([type, val]) => (
-                    val ? (
-                      <div key={type} className="bg-[#0B0F1A] rounded-lg px-3 py-1.5">
-                        <span className="text-xs text-gray-400">{type}: </span>
-                        <span className="text-sm font-bold text-white">{typeof val === 'number' ? formatCurrency(val) : String(val)}</span>
-                      </div>
-                    ) : null
-                  ))}
-                </div>
-              )}
-              {analysis.investissements.analyse && (
-                <p className="text-xs text-gray-400">{analysis.investissements.analyse}</p>
-              )}
+            </Card>
+          )}
+
+          {analysis.investissements && analysis.investissements.analyse && (
+            <Card>
+              <h4 className="text-xs text-gray-500 mb-2">Analyse investissements</h4>
+              <p className="text-xs text-gray-400">{analysis.investissements.analyse}</p>
             </Card>
           )}
 
