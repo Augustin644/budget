@@ -15,7 +15,6 @@ const MORE_ITEMS = [
   { href: '/credits', label: 'Crédits', icon: '💳' },
   { href: '/import', label: 'Import Excel', icon: '📥' },
   { href: '/scan', label: 'Scanner', icon: '🤖' },
-  { href: '/analyse', label: 'Analyse IA', icon: '🧠' },
   { href: '/export', label: 'Export', icon: '📤' },
   { href: '/parametres', label: 'Paramètres', icon: '⚙️' },
 ];
@@ -34,7 +33,7 @@ export default function BottomNav() {
 
       {showMore && (
         <div className="md:hidden fixed bottom-16 left-2 right-2 bg-[#1F2937] border border-[#374151] rounded-xl z-50 p-2 shadow-lg">
-          <div className="grid grid-cols-4 gap-1">
+          <div className="grid grid-cols-3 gap-1">
             {MORE_ITEMS.map((item) => {
               const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
               return (

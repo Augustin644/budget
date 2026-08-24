@@ -11,7 +11,6 @@ const NAV_ITEMS = [
   { href: '/transactions', label: 'Transactions', icon: '🧾' },
   { href: '/import', label: 'Import Excel', icon: '📥' },
   { href: '/scan', label: 'Scanner relevé', icon: '🤖' },
-  { href: '/analyse', label: 'Analyse IA', icon: '🧠' },
   { href: '/export', label: 'Export', icon: '📤' },
   { href: '/parametres', label: 'Paramètres', icon: '⚙️' },
 ];
